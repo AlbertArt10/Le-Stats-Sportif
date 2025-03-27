@@ -5,6 +5,7 @@ import os
 import json
 
 # Example endpoint definition
+# Endpoint de test simplu: echo
 @webserver.route('/api/post_endpoint', methods=['POST'])
 def post_endpoint():
     if request.method == 'POST':
@@ -22,34 +23,41 @@ def post_endpoint():
         # Method Not Allowed
         return jsonify({"error": "Method not allowed"}), 405
 
+# Endpoint pentru obținerea rezultatelor unui job
 @webserver.route('/api/get_results/<job_id>', methods=['GET'])
 def get_response(job_id):
     print(f"JobID is {job_id}")
-    # TODO
-    # Check if job_id is valid
+    # Construim calea către fișierul de rezultat
+    filename = f"results/{job_id}.json"
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            result_data = json.load(f)
+        return jsonify({"status": "done", "data": result_data})
+    else:
+        return jsonify({"status": "running"})
 
-    # Check if job_id is done and return the result
-    #    res = res_for(job_id)
-    #    return jsonify({
-    #        'status': 'done',
-    #        'data': res
-    #    })
 
-    # If not, return running status
-    return jsonify({'status': 'NotImplemented'})
-
+# Endpoint pentru calculul mediei pe state
 @webserver.route('/api/states_mean', methods=['POST'])
 def states_mean_request():
-    # Get request data
     data = request.json
     print(f"Got request {data}")
+    
+    # Generăm un job_id unic
+    current_job_id = webserver.job_counter
+    webserver.job_counter += 1
 
-    # TODO
-    # Register job. Don't wait for task to finish
-    # Increment job_id counter
-    # Return associated job_id
+    # Definim jobul ca o funcție ce calculează media pe state
+    def job():
+        result = webserver.data_ingestor.compute_states_mean(data['question'])
+        return result, f"job_id_{current_job_id}"
+    
+    # Adăugăm jobul în coada ThreadPool-ului
+    webserver.tasks_runner.job_queue.put(job)
+    
+    # Returnăm job_id-ul către client
+    return jsonify({"job_id": f"job_id_{current_job_id}"})
 
-    return jsonify({"status": "NotImplemented"})
 
 @webserver.route('/api/state_mean', methods=['POST'])
 def state_mean_request():
@@ -132,20 +140,19 @@ def state_mean_by_category_request():
 
     return jsonify({"status": "NotImplemented"})
 
-# You can check localhost in your browser to see what this displays
+
+# Endpoint pentru index – afișează rutele definite
 @webserver.route('/')
 @webserver.route('/index')
 def index():
     routes = get_defined_routes()
-    msg = f"Hello, World!\n Interact with the webserver using one of the defined routes:\n"
-
-    # Display each route as a separate HTML <p> tag
+    msg = "Hello, World!\n Interact with the webserver using one of the defined routes:\n"
     paragraphs = ""
     for route in routes:
         paragraphs += f"<p>{route}</p>"
-
     msg += paragraphs
     return msg
+
 
 def get_defined_routes():
     routes = []

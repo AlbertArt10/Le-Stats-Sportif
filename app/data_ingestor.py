@@ -26,9 +26,19 @@ class DataIngestor:
             'Percent of adults who engage in muscle-strengthening activities on 2 or more days a week',
         ]
 
+
     def compute_states_mean(self, question: str) -> dict:
-        # Filtrăm datele pentru întrebarea primită
-        df_filtered = self.df[self.df['Question'] == question]
-        # Grupăm după "LocationAbbr" și calculăm media valorilor din "Data_Value"
-        means = df_filtered.groupby('LocationAbbr')['Data_Value'].mean().to_dict()
-        return means
+        # Filtrăm datele pentru întrebarea primită și pentru anii 2011–2022
+        df_filtered = self.df[
+            (self.df['YearStart'] >= 2011) &
+            (self.df['YearEnd'] <= 2022) &
+            (self.df['Question'] == question)
+        ]
+        # Grupăm după "LocationDesc" și calculăm media valorilor din "Data_Value"
+        means = df_filtered.groupby('LocationDesc')['Data_Value'].mean()
+
+        # Sortează după valoarea medie (ordine crescătoare)
+        means = means.sort_values(ascending=True)
+        return means.to_dict()
+
+

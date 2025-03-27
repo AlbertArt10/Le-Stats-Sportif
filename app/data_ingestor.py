@@ -108,3 +108,13 @@ class DataIngestor:
         global_mean = df_filtered['Data_Value'].mean()
         # Returnăm rezultatul
         return {"global_mean": global_mean}
+
+
+    def compute_diff_from_mean(self, question: str) -> dict:
+        # Calculăm media globală (ca float)
+        global_mean = self.compute_global_mean(question)["global_mean"]
+        # Calculăm mediile pe state (ca dicționar)
+        states_means = self.compute_states_mean(question)
+        # Pentru fiecare stat, calculăm diferența: media statului - media globală
+        diff = {state: global_mean - states_means[state] for state in states_means}
+        return diff

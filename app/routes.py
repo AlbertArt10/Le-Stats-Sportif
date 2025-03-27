@@ -156,13 +156,28 @@ def global_mean_request():
 
 @webserver.route('/api/diff_from_mean', methods=['POST'])
 def diff_from_mean_request():
-    # TODO
-    # Get request data
-    # Register job. Don't wait for task to finish
-    # Increment job_id counter
-    # Return associated job_id
+    # extragem datele din request
+    data = request.json
+    print(f"Got request {data}")
+    
+    # Verificăm dacă am primit "question"
+    if 'question' not in data:
+        return jsonify({"status": "error", "reason": "Missing 'question' parameter"}), 400
 
-    return jsonify({"status": "NotImplemented"})
+    # Generăm un job_id unic
+    current_job_id = webserver.job_counter
+    webserver.job_counter += 1
+
+    # definim job-ul pentru calculul diferenței față de media globală
+    def job():
+        result = webserver.data_ingestor.compute_diff_from_mean(data['question'])
+        return result, f"job_id_{current_job_id}"
+
+    # adăugăm job-ul în coada ThreadPool-ului
+    webserver.tasks_runner.job_queue.put(job)
+    # returnăm job_id-ul generat către client
+    return jsonify({"job_id": f"job_id_{current_job_id}"})
+
 
 @webserver.route('/api/state_diff_from_mean', methods=['POST'])
 def state_diff_from_mean_request():

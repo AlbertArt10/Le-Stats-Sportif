@@ -1,9 +1,15 @@
 import os
 import json
+import pandas as pd
 
 class DataIngestor:
     def __init__(self, csv_path: str):
-        # TODO: Read csv from csv_path
+        # Citirea CSV-ului folosind pandas
+        self.df = pd.read_csv(csv_path)
+        
+        # Convertim coloana Data_Value la numeric
+        self.df['Data_Value'] = pd.to_numeric(self.df['Data_Value'], errors='coerce')
+        print("CSV loaded successfully. Number of rows:", len(self.df))
 
         self.questions_best_is_min = [
             'Percent of adults aged 18 years and older who have an overweight classification',

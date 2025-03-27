@@ -29,17 +29,22 @@ def get_response(job_id):
     print(f"JobID is {job_id}")
     # Construim calea către fișierul de rezultat
     filename = f"results/{job_id}.json"
+
+    # Verificăm dacă fișierul există
     if os.path.exists(filename):
         with open(filename, "r") as f:
             result_data = json.load(f)
+        # Returnăm un răspuns JSON cu status-ul "done" și datele rezultate
         return jsonify({"status": "done", "data": result_data})
     else:
+        # Dacă fișierul nu există, presupunem că job-ul este încă în curs de execuție
         return jsonify({"status": "running"})
 
 
 # Endpoint pentru calculul mediei pe state
 @webserver.route('/api/states_mean', methods=['POST'])
 def states_mean_request():
+    # Extragem datele din request-ul JSON
     data = request.json
     print(f"Got request {data}")
     
@@ -61,13 +66,27 @@ def states_mean_request():
 
 @webserver.route('/api/state_mean', methods=['POST'])
 def state_mean_request():
-    # TODO
-    # Get request data
-    # Register job. Don't wait for task to finish
-    # Increment job_id counter
-    # Return associated job_id
+    data = request.json
+    print(f"Got request {data}")
+    
+    # Verificăm dacă am primit atât question cât și state
+    if 'question' not in data or 'state' not in data:
+        return jsonify({"status": "error", "reason": "Missing 'question' or 'state' parameter"}), 400
+    
+    # Generăm un job_id unic
+    current_job_id = webserver.job_counter
+    webserver.job_counter += 1
+    
+    # Definim jobul ca o funcție ce calculează media pentru state-ul specificat
+    def job():
+        result = webserver.data_ingestor.compute_state_mean(data['question'], data['state'])
+        return result, f"job_id_{current_job_id}"
+    
+    # Adăugăm jobul în coada de job-uri pentru execuție
+    webserver.tasks_runner.job_queue.put(job)
 
-    return jsonify({"status": "NotImplemented"})
+    # Returnăm job_id-ul către client
+    return jsonify({"job_id": f"job_id_{current_job_id}"})
 
 
 @webserver.route('/api/best5', methods=['POST'])

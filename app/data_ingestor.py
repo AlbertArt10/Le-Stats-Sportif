@@ -95,3 +95,16 @@ class DataIngestor:
         # Selectăm primele 5 state din lista sortată
         worst5 = dict(sorted_means[:5])
         return worst5
+
+
+    def compute_global_mean(self, question: str) -> dict:
+        # Filtrăm datele pentru întrebarea primită
+        df_filtered = self.df[
+            (self.df['YearStart'] >= 2011) &
+            (self.df['YearEnd'] <= 2022) &
+            (self.df['Question'] == question)
+        ]
+        # Calculăm media globală a valorilor din "Data_Value"
+        global_mean = df_filtered['Data_Value'].mean()
+        # Returnăm rezultatul
+        return {"global_mean": global_mean}

@@ -134,13 +134,25 @@ def worst5_request():
 
 @webserver.route('/api/global_mean', methods=['POST'])
 def global_mean_request():
-    # TODO
-    # Get request data
-    # Register job. Don't wait for task to finish
-    # Increment job_id counter
-    # Return associated job_id
+    # extragem datele primite în request
+    data = request.json
+    print(f"Got request {data}")
+    
+    # generăm un identificator unic pentru job
+    current_job_id = webserver.job_counter
+    webserver.job_counter += 1
 
-    return jsonify({"status": "NotImplemented"})
+    # definim job-ul pentru calculul mediei globale
+    def job():
+        result = webserver.data_ingestor.compute_global_mean(data['question'])
+        return result, f"job_id_{current_job_id}"
+
+    # adăugăm job-ul în coada ThreadPool-ului
+    webserver.tasks_runner.job_queue.put(job)
+
+    # returnăm job_id-ul generat către client
+    return jsonify({"job_id": f"job_id_{current_job_id}"})
+
 
 @webserver.route('/api/diff_from_mean', methods=['POST'])
 def diff_from_mean_request():

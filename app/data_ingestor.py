@@ -118,3 +118,43 @@ class DataIngestor:
         # Pentru fiecare stat, calculăm diferența: media statului - media globală
         diff = {state: global_mean - states_means[state] for state in states_means}
         return diff
+
+    def compute_state_diff_from_mean(self, question: str, state: str) -> dict:
+        global_mean = self.compute_global_mean(question)["global_mean"]
+        state_mean = self.compute_state_mean(question, state)[state]
+
+        # Diferența: media globală - media statului
+        diff = global_mean - state_mean
+        return {state: diff}
+
+    def compute_mean_by_category(self, question: str) -> dict:
+        # Filtrăm datele pentru întrebarea dată
+        df_filtered = self.df[
+            (self.df['YearStart'] >= 2011) &
+            (self.df['YearEnd'] <= 2022) &
+            (self.df['Question'] == question)
+        ]
+        # Grupăm după stat, apoi după StratificationCategory1 și Stratification1
+        grouped = df_filtered.groupby(['LocationDesc', 'StratificationCategory1', 'Stratification1'])['Data_Value'].mean()
+    
+        # Transformăm rezultatul într-un dicționar
+        result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key, value in grouped.items()}
+        return result
+
+
+    def compute_state_mean_by_category(self, question: str, state: str) -> dict:
+        # Filtrăm datele
+        df_filtered = self.df[
+            (self.df['YearStart'] >= 2011) &
+            (self.df['YearEnd'] <= 2022) &
+            (self.df['Question'] == question) &
+            (self.df['LocationDesc'] == state)
+        ]
+        # Grupăm după StratificationCategory1 și Stratification1 și calculăm media
+        grouped = df_filtered.groupby(['StratificationCategory1', 'Stratification1'])['Data_Value'].mean()
+    
+        # Transformăm rezultatul într-un dicționar
+        result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key, value in grouped.items()}
+    
+        # Returnăm rezultatul
+        return {state: result}

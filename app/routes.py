@@ -112,13 +112,25 @@ def best5_request():
 
 @webserver.route('/api/worst5', methods=['POST'])
 def worst5_request():
-    # TODO
-    # Get request data
-    # Register job. Don't wait for task to finish
-    # Increment job_id counter
-    # Return associated job_id
+    # extragem datele din request
+    data = request.json
+    print(f"Got request {data}")
+    
+    # generăm un job_id unic pentru noul request
+    current_job_id = webserver.job_counter
+    webserver.job_counter += 1
 
-    return jsonify({"status": "NotImplemented"})
+    def job():
+        # calculăm cele mai slabe 5 state pe baza întrebării
+        result = webserver.data_ingestor.compute_worst5(data['question'])
+        return result, f"job_id_{current_job_id}"
+
+    # adăugăm job-ul în coada ThreadPool-ului
+    webserver.tasks_runner.job_queue.put(job)
+
+    # returnăm job_id-ul către client
+    return jsonify({"job_id": f"job_id_{current_job_id}"})
+
 
 @webserver.route('/api/global_mean', methods=['POST'])
 def global_mean_request():

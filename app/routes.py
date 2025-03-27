@@ -91,13 +91,24 @@ def state_mean_request():
 
 @webserver.route('/api/best5', methods=['POST'])
 def best5_request():
-    # TODO
-    # Get request data
-    # Register job. Don't wait for task to finish
-    # Increment job_id counter
-    # Return associated job_id
+    data = request.json
+    print(f"Got request {data}")
+    
+    # Generăm un job_id unic
+    current_job_id = webserver.job_counter
+    webserver.job_counter += 1
 
-    return jsonify({"status": "NotImplemented"})
+    def job():
+        # Calculăm cele mai bune 5 rezultate pe baza întrebării primite
+        result = webserver.data_ingestor.compute_best5(data['question'])
+        return result, f"job_id_{current_job_id}"
+
+    # Adăugăm job-ul în coada
+    webserver.tasks_runner.job_queue.put(job)
+
+    # Returnăm job_id-ul către client
+    return jsonify({"job_id": f"job_id_{current_job_id}"})
+
 
 @webserver.route('/api/worst5', methods=['POST'])
 def worst5_request():

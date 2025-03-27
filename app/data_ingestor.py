@@ -56,3 +56,23 @@ class DataIngestor:
 
         # returnează rezultatul
         return {state: mean_value}
+
+
+    def compute_best5(self, question: str) -> dict:
+        # Obținem mediile pe state pentru întrebarea dată
+        means = self.compute_states_mean(question)
+    
+        # Verificăm dacă "best" înseamnă valori minime sau maxime
+        if question in self.questions_best_is_min:
+            # Cele mai bune sunt cele cu valori mai mici
+            sorted_means = sorted(means.items(), key=lambda x: x[1])
+        elif question in self.questions_best_is_max:
+            # Cele mai bune sunt cele cu valori mai mari
+            sorted_means = sorted(means.items(), key=lambda x: x[1], reverse=True)
+        else:
+            # Dacă nu se recunoaște întrebarea, sortăm crescător ca fallback
+            sorted_means = sorted(means.items(), key=lambda x: x[1])
+    
+        # Selectăm primele 5 state
+        best5 = dict(sorted_means[:5])
+        return best5

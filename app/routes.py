@@ -26,6 +26,11 @@ def post_endpoint():
 # Endpoint pentru obținerea rezultatelor unui job
 @webserver.route('/api/get_results/<job_id>', methods=['GET'])
 def get_response(job_id):
+
+    # Verificăm dacă job_id este valid
+    if job_id not in webserver.job_status:
+        return jsonify({"status": "error", "reason": "Invalid job_id"})
+    
     print(f"JobID is {job_id}")
     # Construim calea către fișierul de rezultat
     filename = f"results/{job_id}.json"

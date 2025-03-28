@@ -152,7 +152,7 @@ class TestAPI(unittest.TestCase):
         self.check_global_timeout()
 
         python_files = []
-        for root, _, files in os.walk("../src/app"):
+        for root, _, files in os.walk("./app"):
             for file in files:
                 if file.endswith('.py'):
                     python_files.append(os.path.join(root, file))
@@ -160,8 +160,7 @@ class TestAPI(unittest.TestCase):
         stdout = sys.stdout
         sys.stdout = StringIO()
 
-        ARGS = ["-r","n", "--rcfile=pylintrc"]
-        # r = pylint.lint.Run(['../src/api_server.py', '../src/app/routes.py']+ARGS, exit=False)
+        ARGS = ["-r", "n", "--rcfile=pylintrc"]
         r = pylint.lint.Run(python_files + ARGS, exit=False)
 
         test = sys.stdout.getvalue()

@@ -20,11 +20,28 @@ class DataIngestor:
         ]
 
         self.questions_best_is_max = [
-            'Percent of adults who achieve at least 150 minutes a week of moderate-intensity aerobic physical activity or 75 minutes a week of vigorous-intensity aerobic activity (or an equivalent combination)',
-            'Percent of adults who achieve at least 150 minutes a week of moderate-intensity aerobic physical activity or 75 minutes a week of vigorous-intensity aerobic physical activity and engage in muscle-strengthening activities on 2 or more days a week',
-            'Percent of adults who achieve at least 300 minutes a week of moderate-intensity aerobic physical activity or 150 minutes a week of vigorous-intensity aerobic activity (or an equivalent combination)',
-            'Percent of adults who engage in muscle-strengthening activities on 2 or more days a week',
+            (
+                "Percent of adults who achieve at least 150 minutes a week of moderate-intensity "
+                "aerobic physical activity or 75 minutes a week of vigorous-intensity aerobic "
+                "activity (or an equivalent combination)"
+            ),
+            (
+                "Percent of adults who achieve at least 150 minutes a week of moderate-intensity "
+                "aerobic physical activity or 75 minutes a week of vigorous-intensity aerobic "
+                "physical activity and engage in muscle-strengthening activities on 2 or more "
+                "days a week"
+            ),
+            (
+                "Percent of adults who achieve at least 300 minutes a week of moderate-intensity "
+                "aerobic physical activity or 150 minutes a week of vigorous-intensity aerobic "
+                "activity (or an equivalent combination)"
+            ),
+            (
+                "Percent of adults who engage in muscle-strengthening activities on 2 or "
+                "more days a week"
+            )
         ]
+
 
     def compute_states_mean(self, question: str) -> dict:
         # filtrează datele
@@ -61,7 +78,7 @@ class DataIngestor:
     def compute_best5(self, question: str) -> dict:
         # Obținem mediile pe state pentru întrebarea dată
         means = self.compute_states_mean(question)
-    
+
         # Verificăm dacă "best" înseamnă valori minime sau maxime
         if question in self.questions_best_is_min:
             # Cele mai bune sunt cele cu valori mai mici
@@ -72,7 +89,7 @@ class DataIngestor:
         else:
             # Dacă nu se recunoaște întrebarea, sortăm crescător ca fallback
             sorted_means = sorted(means.items(), key=lambda x: x[1])
-    
+
         # Selectăm primele 5 state
         best5 = dict(sorted_means[:5])
         return best5
@@ -81,7 +98,7 @@ class DataIngestor:
     def compute_worst5(self, question: str) -> dict:
         # Obținem mediile pe state pentru întrebarea dată
         means = self.compute_states_mean(question)
-    
+
         # Pentru întrebările din lista best_is_min, cele mai rele sunt cele cu cele mai mari medii.
         if question in self.questions_best_is_min:
             sorted_means = sorted(means.items(), key=lambda x: x[1], reverse=True)
@@ -91,7 +108,7 @@ class DataIngestor:
         else:
             # Fallback: sortează descrescător
             sorted_means = sorted(means.items(), key=lambda x: x[1], reverse=True)
-    
+
         # Selectăm primele 5 state din lista sortată
         worst5 = dict(sorted_means[:5])
         return worst5
@@ -135,8 +152,10 @@ class DataIngestor:
             (self.df['Question'] == question)
         ]
         # Grupăm după stat, apoi după StratificationCategory1 și Stratification1
-        grouped = df_filtered.groupby(['LocationDesc', 'StratificationCategory1', 'Stratification1'])['Data_Value'].mean()
-    
+        grouped = df_filtered.groupby(
+            ['LocationDesc', 'StratificationCategory1', 'Stratification1']
+        )['Data_Value'].mean()
+       
         # Transformăm rezultatul într-un dicționar
         result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key, value in grouped.items()}
         return result

@@ -1,46 +1,50 @@
-from queue import Queue
+from queue import Queue, Empty
 from threading import Thread, Event
 import time
 import os
+import json
 
 class ThreadPool:
-    def __init__(self):
-        # You must implement a ThreadPool of TaskRunners
-        # Your ThreadPool should check if an environment variable TP_NUM_OF_THREADS is defined
-        # If the env var is defined, that is the number of threads to be used by the thread pool
-        # Otherwise, you are to use what the hardware concurrency allows
-        # You are free to write your implementation as you see fit, but
-        # You must NOT:
-        #   * create more threads than the hardware concurrency allows
-        #   * recreate threads for each task
-        # Note: the TP_NUM_OF_THREADS env var will be defined by the checker
-        
+    def __init__(self, webserver):
+
         # Determinăm numărul de threaduri
         num_threads = int(os.environ.get("TP_NUM_OF_THREADS", os.cpu_count()))
+        self.webserver = webserver
         self.job_queue = Queue()
+        self.shutdown_event = Event()  # Semnal de shutdown
         self.workers = []
         for _ in range(num_threads):
-            worker = TaskRunner(self.job_queue)
+            worker = TaskRunner(self.job_queue, self.shutdown_event, self.webserver)
             worker.start()
             self.workers.append(worker)
 
 class TaskRunner(Thread):
-    def __init__(self, job_queue):
+    def __init__(self, job_queue, shutdown_event, webserver):
         Thread.__init__(self)
         self.job_queue = job_queue
+        self.shutdown_event = shutdown_event
+        self.webserver = webserver
         self.daemon = True  # Permite închiderea threadurilor la exit
 
     def run(self):
         while True:
-            job = self.job_queue.get()
             try:
-                # Executăm jobul (job e o funcție)
+                job = self.job_queue.get(timeout=1)
+            except Empty:
+                if self.shutdown_event.is_set() and self.job_queue.empty():
+                    break  # Ieșim din loop dacă s-a semnalat shutdown și nu mai sunt joburi
+                continue
+
+            try:
+                # Executăm funcția job()
                 result, job_id = job()
-                # Salvăm rezultatul pe disc, de exemplu într-un fișier cu numele job_id în directorul "results/"
+                # Salvăm rezultatul pe disc
                 with open(f"results/{job_id}.json", "w") as f:
-                    import json
                     json.dump(result, f)
+                self.webserver.job_status[job_id] = "done"  # Actualizăm statusul la done
+
             except Exception as e:
                 print(f"Eroare la execuția jobului: {e}")
+                self.webserver.job_status[job_id] = "error"
             finally:
                 self.job_queue.task_done()

@@ -44,7 +44,7 @@ class TaskRunner(Thread):
                 self.webserver.job_status[job_id] = "done"  # Actualizăm statusul la done
 
             except Exception as e:
-                print(f"Eroare la execuția jobului: {e}")
+                self.webserver.logger.error("Eroare la execuția jobului: %s", e)
                 self.webserver.job_status[job_id] = "error"
             finally:
                 self.job_queue.task_done()

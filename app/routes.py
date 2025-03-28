@@ -7,31 +7,34 @@ import json
 # Endpoint de test simplu: echo
 @webserver.route('/api/post_endpoint', methods=['POST'])
 def post_endpoint():
+    # Logăm intrarea și parametrii request-ului
+    webserver.logger.info("Intrare în /api/post_endpoint, request: %s", request.json)
     if request.method == 'POST':
-        # Assuming the request contains JSON data
+        # Presupunem că request-ul conține date JSON
         data = request.json
-        print(f"got data in post {data}")
 
-        # Process the received data
-        # For demonstration purposes, just echoing back the received data
+        # Procesăm datele primite; în acest exemplu, doar le returnăm (echo)
         response = {"message": "Received data successfully", "data": data}
 
-        # Sending back a JSON response
+        # Logăm ieșirea și răspunsul
+        webserver.logger.info("Iesire din /api/post_endpoint, raspuns: %s", response)
+
+        # Returnăm răspunsul ca JSON
         return jsonify(response)
     else:
-        # Method Not Allowed
+        # Metodă neacceptată: logăm eroarea și returnăm un răspuns de eroare
+        webserver.logger.error("Metoda neacceptată în /api/post_endpoint: %s", request.method)
         return jsonify({"error": "Method not allowed"}), 405
 
 
 # Endpoint pentru obținerea rezultatelor unui job
 @webserver.route('/api/get_results/<job_id>', methods=['GET'])
 def get_response(job_id):
-
-    # Verificăm dacă job_id este valid
+    # Logăm intrarea și verificăm job_id-ul
+    webserver.logger.info("Intrare în /api/get_results cu job_id: %s", job_id)
     if job_id not in webserver.job_status:
         return jsonify({"status": "error", "reason": "Invalid job_id"})
     
-    print(f"JobID is {job_id}")
     # Construim calea către fișierul de rezultat
     filename = f"results/{job_id}.json"
 
@@ -39,10 +42,14 @@ def get_response(job_id):
     if os.path.exists(filename):
         with open(filename, "r") as f:
             result_data = json.load(f)
+
+        # Logăm ieșirea și datele rezultate
+        webserver.logger.info("Job_id %s finalizat, date: %s", job_id, result_data)
         # Returnăm un răspuns JSON cu status-ul "done" și datele rezultate
         return jsonify({"status": "done", "data": result_data})
     else:
         # Dacă fișierul nu există, presupunem că job-ul este încă în curs de execuție
+        webserver.logger.info("Job_id %s încă în execuție", job_id)
         return jsonify({"status": "running"})
 
 
@@ -51,7 +58,7 @@ def get_response(job_id):
 def states_mean_request():
     # Extragem datele din request-ul JSON
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/states_mean, request: %s", data)
     
     # Generăm un job_id unic și setăm statusul inițial "running"
     job_id = f"job_id_{webserver.job_counter}"
@@ -65,19 +72,23 @@ def states_mean_request():
     
     # Adăugăm jobul în coada ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
-    
+    webserver.logger.info("Job-ul %s a fost adăugat în coadă pentru /api/states_mean", job_id)
+
     # Returnăm job_id-ul către client
-    return jsonify({"job_id": job_id})
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/states_mean, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul mediei pentru un anumit stat
 @webserver.route('/api/state_mean', methods=['POST'])
 def state_mean_request():
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/state_mean, request: %s", data)
     
     # Verificăm dacă am primit atât question cât și state
     if 'question' not in data or 'state' not in data:
+        webserver.logger.error("Parametri lipsă în /api/state_mean: %s", data)
         return jsonify({"status": "error", "reason": "Missing 'question' or 'state' parameter"}), 400
     
     # Generăm un job_id unic și setăm statusul "running"
@@ -92,16 +103,19 @@ def state_mean_request():
     
     # Adăugăm jobul în coada de job-uri pentru execuție
     webserver.tasks_runner.job_queue.put(job)
+    webserver.logger.info("Job-ul %s a fost adăugat în coadă pentru /api/state_mean", job_id)
 
     # Returnăm job_id-ul către client
-    return jsonify({"job_id": job_id})
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/state_mean, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul best5
 @webserver.route('/api/best5', methods=['POST'])
 def best5_request():
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/best5, request: %s", data)
     
     # Generăm un job_id unic și setăm statusul "running"
     job_id = f"job_id_{webserver.job_counter}"
@@ -115,17 +129,20 @@ def best5_request():
 
     # Adăugăm job-ul în coada
     webserver.tasks_runner.job_queue.put(job)
-
+    webserver.logger.info("Job-ul %s a fost adăugat în coadă pentru /api/best5", job_id)
+    
     # Returnăm job_id-ul către client
-    return jsonify({"job_id": job_id})
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/best5, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul worst5
 @webserver.route('/api/worst5', methods=['POST'])
 def worst5_request():
-    # extragem datele din request
+    # Extragem datele din request
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/worst5, request: %s", data)
     
     # Generăm un job_id unic și setăm statusul "running"
     job_id = f"job_id_{webserver.job_counter}"
@@ -133,15 +150,18 @@ def worst5_request():
     webserver.job_counter += 1
 
     def job():
-        # calculăm cele mai slabe 5 state pe baza întrebării
+        # Calculăm cele mai slabe 5 state pe baza întrebării
         result = webserver.data_ingestor.compute_worst5(data['question'])
         return result, job_id
 
-    # adăugăm job-ul în coada ThreadPool-ului
+    # Adăugăm job-ul în coada ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
-
-    # returnăm job_id-ul către client
-    return jsonify({"job_id": job_id})
+    webserver.logger.info("Job-ul %s a fost adăugat în coada pentru /api/worst5", job_id)
+    
+    # Returnăm job_id-ul către client
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/worst5, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul mediei globale
@@ -149,34 +169,38 @@ def worst5_request():
 def global_mean_request():
     # extragem datele primite în request
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/global_mean, request: %s", data)
     
     # Generăm un job_id unic și setăm statusul "running"
     job_id = f"job_id_{webserver.job_counter}"
     webserver.job_status[job_id] = "running"
     webserver.job_counter += 1
 
-    # definim job-ul pentru calculul mediei globale
+    # Definim job-ul pentru calculul mediei globale
     def job():
         result = webserver.data_ingestor.compute_global_mean(data['question'])
         return result, job_id
 
-    # adăugăm job-ul în coada ThreadPool-ului
+     # Adăugăm job-ul în coada ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
-
-    # returnăm job_id-ul generat către client
-    return jsonify({"job_id": job_id})
+    webserver.logger.info("Job-ul %s a fost adăugat în coada pentru /api/global_mean", job_id)
+    
+    # Returnăm job_id-ul generat către client
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/global_mean, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul diferenței față de media globală
 @webserver.route('/api/diff_from_mean', methods=['POST'])
 def diff_from_mean_request():
-    # extragem datele din request
+    # Extragem datele din request
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/diff_from_mean, request: %s", data)
     
     # Verificăm dacă am primit "question"
     if 'question' not in data:
+        webserver.logger.error("Parametru 'question' lipsă în /api/diff_from_mean")
         return jsonify({"status": "error", "reason": "Missing 'question' parameter"}), 400
 
     # Generăm un job_id unic și setăm statusul "running"
@@ -184,15 +208,19 @@ def diff_from_mean_request():
     webserver.job_status[job_id] = "running"
     webserver.job_counter += 1
 
-    # definim job-ul pentru calculul diferenței față de media globală
+    # Definim job-ul pentru calculul diferenței față de media globală
     def job():
         result = webserver.data_ingestor.compute_diff_from_mean(data['question'])
         return result, job_id
 
-    # adăugăm job-ul în coada ThreadPool-ului
+    # Adăugăm job-ul în coada ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
-    # returnăm job_id-ul generat către client
-    return jsonify({"job_id": job_id})
+    webserver.logger.info("Job-ul %s a fost adăugat în coada pentru /api/diff_from_mean", job_id)
+    
+    # Returnăm job_id-ul generat către client
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/diff_from_mean, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul diferenței între media globală și media unui stat
@@ -200,10 +228,11 @@ def diff_from_mean_request():
 def state_diff_from_mean_request():
     # Extragem datele din request
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/state_diff_from_mean, request: %s", data)
 
     # Verificăm dacă s-au primit parametrii "question" și "state"
     if 'question' not in data or 'state' not in data:
+        webserver.logger.error("Parametri lipsă în /api/state_diff_from_mean: %s", data)
         return jsonify({"status": "error", "reason": "Missing 'question' or 'state' parameter"}), 400
 
     # Generăm un job_id unic și setăm statusul "running"
@@ -218,8 +247,12 @@ def state_diff_from_mean_request():
 
     # Adăugăm job-ul în coada ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
+    webserver.logger.info("Job-ul %s a fost adăugat în coada pentru /api/state_diff_from_mean", job_id)
+    
     # Returnăm job_id-ul generat către client
-    return jsonify({"job_id": job_id})
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/state_diff_from_mean, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul mediei pe categorii
@@ -227,9 +260,11 @@ def state_diff_from_mean_request():
 def mean_by_category_request():
     # Extragem datele din request
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/mean_by_category, request: %s", data)
+
     # Verificăm dacă parametrul "question" a fost primit
     if 'question' not in data:
+        webserver.logger.error("Parametru 'question' lipsă în /api/mean_by_category")
         return jsonify({"status": "error", "reason": "Missing 'question' parameter"}), 400
 
     # Generăm un job_id unic și setăm statusul "running"
@@ -244,8 +279,12 @@ def mean_by_category_request():
     
     # Adăugăm job-ul în coada ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
+    webserver.logger.info("Job-ul %s a fost adăugat în coada pentru /api/mean_by_category", job_id)
+    
     # Returnăm job_id-ul generat către client
-    return jsonify({"job_id": job_id})
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/mean_by_category, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru calculul mediei pe categorii pentru un stat anume
@@ -253,10 +292,11 @@ def mean_by_category_request():
 def state_mean_by_category_request():
     # Preluăm datele din request-ul JSON
     data = request.json
-    print(f"Got request {data}")
+    webserver.logger.info("Intrare în /api/state_mean_by_category, request: %s", data)
     
     # Validăm existența parametrilor "question" și "state"
     if 'question' not in data or 'state' not in data:
+        webserver.logger.error("Parametri lipsă în /api/state_mean_by_category: %s", data)
         return jsonify({"status": "error", "reason": "Missing 'question' or 'state' parameter"}), 400
 
     # Generăm un job_id unic și setăm statusul "running"
@@ -271,8 +311,12 @@ def state_mean_by_category_request():
     
     # Adăugăm job-ul în coada de execuție a ThreadPool-ului
     webserver.tasks_runner.job_queue.put(job)
+    webserver.logger.info("Job-ul %s a fost adăugat în coada pentru /api/state_mean_by_category", job_id)
+    
     # Returnăm job_id-ul generat către client
-    return jsonify({"job_id": job_id})
+    response = {"job_id": job_id}
+    webserver.logger.info("Iesire din /api/state_mean_by_category, raspuns: %s", response)
+    return jsonify(response)
 
 
 # Endpoint pentru index – afișează rutele definite
@@ -301,10 +345,14 @@ def get_defined_routes():
 def graceful_shutdown():
     # Semnalăm ThreadPool-ului că nu se mai acceptă joburi noi
     webserver.tasks_runner.shutdown_event.set()
+    webserver.logger.info("Shutdown semnalat, verificăm coada de joburi.")
+
     # Verificăm dacă coada este goală
     if webserver.tasks_runner.job_queue.empty():
+        webserver.logger.info("Coada de joburi este goală, shutdown finalizat.")
         return jsonify({"status": "done"})
     else:
+        webserver.logger.info("Coada de joburi nu este goală, status: running.")
         return jsonify({"status": "running"})
 
 
@@ -312,6 +360,7 @@ def graceful_shutdown():
 @webserver.route('/api/jobs', methods=['GET'])
 def jobs():
     # Returnăm un JSON cu toate job_id-urile și statusurile lor
+    webserver.logger.info("Endpoint-ul /api/jobs accesat, job_status: %s", webserver.job_status)
     return jsonify({"status": "done", "data": webserver.job_status})
 
 
@@ -320,4 +369,5 @@ def jobs():
 def num_jobs():
     # Returnăm numărul de joburi rămase în coadă
     remaining = webserver.tasks_runner.job_queue.qsize()
+    webserver.logger.info("Endpoint-ul /api/num_jobs accesat, joburi rămase: %d", remaining)
     return jsonify({"num_jobs": remaining})

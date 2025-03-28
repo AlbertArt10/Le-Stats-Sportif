@@ -5,6 +5,8 @@ __pycache__/
 
 results/
 
+webserver.log
+
 venv/
 build/
 develop-eggs/

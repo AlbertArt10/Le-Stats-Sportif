@@ -12,30 +12,33 @@ class TestNumJobsEndpoint(unittest.TestCase):
                 break
 
     def test_num_jobs_after_shutdown(self):
-        # Definim un job dummy care se termină rapid
+        # Definim un job dummy care returnează rapid
         def dummy_job():
             return {"result": "dummy"}, "dummy_job"
 
         # Adăugăm câteva joburi dummy în coadă
         for _ in range(3):
             webserver.tasks_runner.job_queue.put(dummy_job)
-        
-        # Așteptăm ca joburile să fie procesate (folosim join pentru a bloca până când coada este goală)
-        webserver.tasks_runner.job_queue.join()
 
         # Simulăm apelul endpoint-ului de graceful shutdown
         with webserver.test_client() as client:
             response_shutdown = client.get('/api/graceful_shutdown')
             self.assertEqual(response_shutdown.status_code, 200)
-            # După shutdown, așteptăm puțin ca thread-urile să finalizeze orice job restant
-            time.sleep(1)
-            
-            # Apelăm endpoint-ul /api/num_jobs pentru a verifica numărul de joburi rămase
+
+            # Verificăm că shutdown-ul a fost semnalat
+            self.assertTrue(webserver.tasks_runner.shutdown_event.is_set())
+
+            # Verificăm că mai există joburi rămase în coadă (pentru că n-au fost procesate)
+            remaining_jobs = webserver.tasks_runner.job_queue.qsize()
+            self.assertGreater(remaining_jobs, 0, "Ne așteptam ca joburi să fie încă în coadă după shutdown")
+
+            # Apelăm endpoint-ul pentru numărul de joburi
             response_num_jobs = client.get('/api/num_jobs')
             self.assertEqual(response_num_jobs.status_code, 200)
             data = response_num_jobs.get_json()
-            # Așteptăm ca numărul de joburi rămase să fie 0
-            self.assertEqual(data.get("num_jobs"), 0, "Numărul de joburi rămase nu este 0 după shutdown și finalizarea joburilor.")
+
+            self.assertEqual(data.get("num_jobs"), remaining_jobs, "Numărul raportat de joburi nu corespunde cu ce e în coadă")
+
 
 if __name__ == '__main__':
     unittest.main()

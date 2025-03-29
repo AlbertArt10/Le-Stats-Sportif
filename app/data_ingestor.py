@@ -1,15 +1,17 @@
-import os
-import json
+"""Modul care conține clasa DataIngestor pentru procesarea datelor din fișierul CSV."""
+
 import pandas as pd
 
 class DataIngestor:
+    """Clasă responsabilă de încărcarea și procesarea datelor."""
+
     def __init__(self, csv_path: str):
+        """Inițializează instanța și încarcă fișierul CSV specificat."""
         # Citirea CSV-ului
         self.df = pd.read_csv(csv_path)
 
         # Convertim coloana Data_Value la numeric
         self.df['Data_Value'] = pd.to_numeric(self.df['Data_Value'], errors='coerce')
-        print("CSV loaded successfully. Number of rows:", len(self.df))
 
         self.questions_best_is_min = [
             'Percent of adults aged 18 years and older who have an overweight classification',
@@ -42,9 +44,9 @@ class DataIngestor:
             )
         ]
 
-
     def compute_states_mean(self, question: str) -> dict:
-        # filtrează datele
+        """Calculează media valorilor Data_Value pentru fiecare stat, pentru o întrebare dată."""
+        # Filtrează datele
         df_filtered = self.df[
             (self.df['YearStart'] >= 2011) &
             (self.df['YearEnd'] <= 2022) &
@@ -52,15 +54,12 @@ class DataIngestor:
         ]
         # calculează media pentru fiecare stat
         means = df_filtered.groupby('LocationDesc')['Data_Value'].mean()
+        means = means.sort_values(ascending=True) # sortează mediile crescător
 
-        # sortează mediile crescător
-        means = means.sort_values(ascending=True)
-
-        # returnează rezultatul
         return means.to_dict()
 
-
     def compute_state_mean(self, question: str, state: str) -> dict:
+        """Calculează media valorilor Data_Value pentru un anumit stat și întrebare."""
         # filtrează datele
         df_filtered = self.df[
             (self.df['YearStart'] >= 2011) &
@@ -74,8 +73,8 @@ class DataIngestor:
         # returnează rezultatul
         return {state: mean_value}
 
-
     def compute_best5(self, question: str) -> dict:
+        """Returnează top 5 state cu cele mai bune scoruri pentru întrebarea dată."""
         # Obținem mediile pe state pentru întrebarea dată
         means = self.compute_states_mean(question)
 
@@ -94,8 +93,8 @@ class DataIngestor:
         best5 = dict(sorted_means[:5])
         return best5
 
-
     def compute_worst5(self, question: str) -> dict:
+        """Returnează top 5 state cu cele mai slabe scoruri pentru întrebarea dată."""
         # Obținem mediile pe state pentru întrebarea dată
         means = self.compute_states_mean(question)
 
@@ -113,8 +112,8 @@ class DataIngestor:
         worst5 = dict(sorted_means[:5])
         return worst5
 
-
     def compute_global_mean(self, question: str) -> dict:
+        """Calculează media valorilor Data_Value la nivel național pentru întrebarea dată."""
         # Filtrăm datele pentru întrebarea primită
         df_filtered = self.df[
             (self.df['YearStart'] >= 2011) &
@@ -126,8 +125,8 @@ class DataIngestor:
         # Returnăm rezultatul
         return {"global_mean": global_mean}
 
-
     def compute_diff_from_mean(self, question: str) -> dict:
+        """Calculează diferența dintre media globală și media fiecărui stat."""
         # Calculăm media globală (ca float)
         global_mean = self.compute_global_mean(question)["global_mean"]
         # Calculăm mediile pe state (ca dicționar)
@@ -137,6 +136,7 @@ class DataIngestor:
         return diff
 
     def compute_state_diff_from_mean(self, question: str, state: str) -> dict:
+        """Calculează diferența dintre media globală și media unui anumit stat."""
         global_mean = self.compute_global_mean(question)["global_mean"]
         state_mean = self.compute_state_mean(question, state)[state]
 
@@ -145,7 +145,7 @@ class DataIngestor:
         return {state: diff}
 
     def compute_mean_by_category(self, question: str) -> dict:
-        # Filtrăm datele pentru întrebarea dată
+        """Calculează media valorilor pentru fiecare combinație."""
         df_filtered = self.df[
             (self.df['YearStart'] >= 2011) &
             (self.df['YearEnd'] <= 2022) &
@@ -155,14 +155,14 @@ class DataIngestor:
         grouped = df_filtered.groupby(
             ['LocationDesc', 'StratificationCategory1', 'Stratification1']
         )['Data_Value'].mean()
-       
+
         # Transformăm rezultatul într-un dicționar
-        result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key, value in grouped.items()}
+        result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key,
+                    value in grouped.items()}
         return result
 
-
     def compute_state_mean_by_category(self, question: str, state: str) -> dict:
-        # Filtrăm datele
+        """Calculează media valorilor pentru un stat, grupate pe categorie și stratificare."""
         df_filtered = self.df[
             (self.df['YearStart'] >= 2011) &
             (self.df['YearEnd'] <= 2022) &
@@ -170,10 +170,10 @@ class DataIngestor:
             (self.df['LocationDesc'] == state)
         ]
         # Grupăm după StratificationCategory1 și Stratification1 și calculăm media
-        grouped = df_filtered.groupby(['StratificationCategory1', 'Stratification1'])['Data_Value'].mean()
-    
+        grouped = df_filtered.groupby(['StratificationCategory1',
+                                       'Stratification1'])['Data_Value'].mean()
+
         # Transformăm rezultatul într-un dicționar
-        result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key, value in grouped.items()}
-    
-        # Returnăm rezultatul
+        result = {"(" + ", ".join([f"'{x}'" for x in key]) + ")": value for key,
+                    value in grouped.items()}
         return {state: result}
